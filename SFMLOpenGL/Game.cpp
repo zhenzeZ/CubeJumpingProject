@@ -30,11 +30,14 @@ int comp_count;		// Component of texture
 
 unsigned char* img_data;		// image data
 
-mat4 mvp, projection, view, model;			// Model View Projection
+mat4 mvp, projection, view, model,   // player
+							model2;		// enemy
+// Model View Projection
 
 Game::Game() : 
 	window(VideoMode(800, 600), 
-	"Introduction to OpenGL Texturing")
+	"Introduction to OpenGL Texturing"),
+	m_player()
 {
 }
 
@@ -42,7 +45,9 @@ Game::Game(sf::ContextSettings settings) :
 	window(VideoMode(800, 600), 
 	"Introduction to OpenGL Texturing", 
 	sf::Style::Default, 
-	settings)
+	settings),
+	m_player(),
+	m_enemy()
 {
 }
 
@@ -106,11 +111,12 @@ void Game::run()
 				}
 
 				
-			}
-			update();
-			render();
+				update();
+				render();
 
-			timeSinceLastUpdate = sf::Time::Zero;
+				timeSinceLastUpdate = sf::Time::Zero;
+			}
+
 		}
 	}
 
@@ -123,6 +129,8 @@ void Game::run()
 
 void Game::initialize()
 {
+	model2 = translate(model2, glm::vec3(rand() % 6, 0, -100));
+
 	isRunning = true;
 	GLint isCompiled = 0;
 	GLint isLinked = 0;
@@ -327,13 +335,24 @@ void Game::update()
 	DEBUG_MSG("Updating...");
 #endif
 	m_player.update(timePerFrame.asSeconds());
-	for (int i = 0; i < VERTICES * 3; i += 3)
-	{
-		m_cubePoints[i] = sf::Vector3f(vertices[0 + 3 * i], vertices[1 + 3 * i], vertices[2 + 3 * i]);
-		
-	}
-	
+	m_enemy.update();
+	model = translate(model, glm::vec3(m_player.getdistancePosX() * cos(Xradius), 0, m_player.getdistancePosX() * sin(Xradius)));
+	model = translate(model, glm::vec3(0, m_player.getdistancePosY() * cos(Xradius) , m_player.getdistancePosY() * sin(Xradius)));
 
+
+
+	model2 = translate(model2, glm::vec3(0, 0, 0.02f));
+
+
+	if (0 >= m_enemy.getEnemyPos().z)
+	{
+		model2 = translate(model2, glm::vec3(rand() % 6, 0, -100));
+	}
+
+	if (m_player.getPlayerPos().x - 1 <= m_enemy.getEnemyPos().x && m_player.getPlayerPos().x + 1 >= m_enemy.getEnemyPos().x)
+	{
+		window.close();
+	}
 	// Update Model View Projection
 	mvp = projection * view * model;
 }
@@ -372,6 +391,36 @@ void Game::render()
 
 	//Draw Element Arrays
 	glDrawElements(GL_TRIANGLES, 3 * INDICES, GL_UNSIGNED_INT, NULL);
+
+	mvp = projection * view * model2;
+
+	//VBO Data....vertices, colors and UV's appended
+	glBufferSubData(GL_ARRAY_BUFFER, 0 * VERTICES * sizeof(GLfloat), 3 * VERTICES * sizeof(GLfloat), vertices);
+	glBufferSubData(GL_ARRAY_BUFFER, 3 * VERTICES * sizeof(GLfloat), 4 * COLORS * sizeof(GLfloat), colors);
+	glBufferSubData(GL_ARRAY_BUFFER, ((3 * VERTICES) + (4 * COLORS)) * sizeof(GLfloat), 2 * UVS * sizeof(GLfloat), uvs);
+
+	// Send transformation to shader mvp uniform
+	glUniformMatrix4fv(mvpID, 1, GL_FALSE, &mvp[0][0]);
+
+	//Set Active Texture .... 32
+	glActiveTexture(GL_TEXTURE0);
+	glUniform1i(textureID, 0);
+
+	//Set pointers for each parameter (with appropriate starting positions)
+	//https://www.khronos.org/opengles/sdk/docs/man/xhtml/glVertexAttribPointer.xml
+	glVertexAttribPointer(positionID, 3, GL_FLOAT, GL_FALSE, 0, 0);
+	glVertexAttribPointer(colorID, 4, GL_FLOAT, GL_FALSE, 0, (VOID*)(3 * VERTICES * sizeof(GLfloat)));
+	glVertexAttribPointer(uvID, 2, GL_FLOAT, GL_FALSE, 0, (VOID*)(((3 * VERTICES) + (4 * COLORS)) * sizeof(GLfloat)));
+
+	//Enable Arrays
+	glEnableVertexAttribArray(positionID);
+	glEnableVertexAttribArray(colorID);
+	glEnableVertexAttribArray(uvID);
+
+
+	//Draw Element Arrays
+	glDrawElements(GL_TRIANGLES, 3 * INDICES, GL_UNSIGNED_INT, NULL);
+
 	window.display();
 
 	//Disable Arrays
@@ -391,4 +440,3 @@ void Game::unload()
 	glDeleteBuffers(1, &vib);	//Delete Vertex Index Buffer
 	stbi_image_free(img_data);		//Free image
 }
-
