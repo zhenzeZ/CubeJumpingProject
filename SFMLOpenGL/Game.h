@@ -11,25 +11,16 @@
 
 #include <SFML/Window.hpp>
 #include <SFML/OpenGL.hpp>
-
-#include "Vector3.h"
-#include "Matrix3.h"
+#include <SFML/Graphics.hpp>
 
 #include <Debug.h>
-#include <math.h>
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
-#include "Player.h"
-#include "Enemy.h"
-
 using namespace std;
 using namespace sf;
 using namespace glm;
-
-class Player;
-class Enemy;
 
 class Game
 {
@@ -40,21 +31,34 @@ public:
 	void run();
 private:
 	Window window;
-	Player m_player;
-	Enemy m_enemy;
 
-	bool isRunning = false;
 	void initialize();
 	void update();
 	void render();
 	void unload();
+	void mouseMovement();
+	void leftViewports();
+	void rightViewports();
+
+	bool firstMouse;
+	bool isRunning;
+
+	GLfloat lastX;
+	GLfloat lastY;
+	GLfloat diertionX;
+	GLfloat diertionY;
+
+	sf::Vector2i m_mousePos;
+
+	sf::View leftView;
+	sf::View RightView;
 
 	sf::Clock  m_clock;
 	sf::Time timePerFrame = sf::seconds(1.0f / 60.0f);
 	sf::Time timeSinceLastUpdate = sf::Time::Zero;
 
-	float Xradius = 0;
-	float Yradius = 0;
+	sf::Font m_font;
+
 };
 
 #endif

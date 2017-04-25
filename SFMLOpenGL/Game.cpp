@@ -2,22 +2,22 @@
 #include <Cube.h>
 
 GLuint	vsid,		// Vertex Shader ID
-		fsid,		// Fragment Shader ID
-		progID,		// Program ID
-		vao = 0,	// Vertex Array ID
-		vbo,		// Vertex Buffer ID
-		vib,		// Vertex Index Buffer
-		to,			// Texture ID 1 to 32
-		positionID,	// Position ID
-		colorID,	// Color ID
-		textureID,	// Texture ID
-		uvID,		// UV ID
-		mvpID;		// Model View Projection ID
+fsid,		// Fragment Shader ID
+progID,		// Program ID
+vao = 0,	// Vertex Array ID
+vbo,		// Vertex Buffer ID
+vib,		// Vertex Index Buffer
+to,			// Texture ID 1 to 32
+positionID,	// Position ID
+colorID,	// Color ID
+textureID,	// Texture ID
+uvID,		// UV ID
+mvpID;		// Model View Projection ID
 
-//const string filename = ".//Assets//Textures//coordinates.tga";
-const string filename = ".//Assets//Textures//cube.tga";
-//const string filename = ".//Assets//Textures//grid.tga";
-//const string filename = ".//Assets//Textures//grid_wip.tga";
+			//const string filename = ".//Assets//Textures//coordinates.tga";
+			//const string filename = ".//Assets//Textures//cube.tga";
+			//const string filename = ".//Assets//Textures//grid.tga";
+const string filename = ".//Assets//Textures//grid_wip.tga";
 //const string filename = ".//Assets//Textures//minecraft.tga";
 //const string filename = ".//Assets//Textures//texture.tga";
 //const string filename = ".//Assets//Textures//texture_2.tga";
@@ -30,28 +30,37 @@ int comp_count;		// Component of texture
 
 unsigned char* img_data;		// image data
 
-mat4 mvp, projection, view, model,   // player
-							model2;		// enemy
-// Model View Projection
+mat4 mvp, projection, viewLeft, viewRight, model; // Model View Projection
 
-Game::Game() : 
-	window(VideoMode(800, 600), 
-	"Introduction to OpenGL Texturing"),
-	m_player()
+glm::vec3 cameraFront;
+
+Game::Game() :
+	window(VideoMode(800, 600),
+		"Pseudo VR"),
+	firstMouse(true),
+	lastX(800.0f / 2.0),
+	lastY(600.0f / 2.0),
+	diertionX(90.0f),
+	diertionY(0.0f)
 {
+	
 }
 
-Game::Game(sf::ContextSettings settings) : 
-	window(VideoMode(800, 600), 
-	"Introduction to OpenGL Texturing", 
-	sf::Style::Default, 
-	settings),
-	m_player(),
-	m_enemy()
+Game::Game(sf::ContextSettings settings) :
+	window(VideoMode(800, 600),
+		"Pseudo VR",
+		sf::Style::Default,
+		settings),
+	firstMouse(true),
+	lastX(800.0f / 2.0),
+	lastY(600.0f / 2.0),
+	diertionX(90.0f),
+	diertionY(0.0f)
 {
+	
 }
 
-Game::~Game(){}
+Game::~Game() {}
 
 
 void Game::run()
@@ -61,9 +70,7 @@ void Game::run()
 
 	Event event;
 
-	m_clock.restart();
-
-	while (isRunning){
+	while (isRunning) {
 
 #if (DEBUG >= 2)
 		DEBUG_MSG("Game running...");
@@ -71,6 +78,11 @@ void Game::run()
 
 		while (window.pollEvent(event))
 		{
+			if (event.type == Event::Closed)
+			{
+				isRunning = false;
+			}
+
 			//get the time since last update and restart the clock
 			timeSinceLastUpdate += m_clock.restart();
 			//update every 60th of a second
@@ -86,38 +98,35 @@ void Game::run()
 				{
 					// Set Model Rotation
 					model = rotate(model, -0.01f, glm::vec3(0, 1, 0)); // Rotate
-					Xradius -= 0.01f;
 				}
 
 				else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Right))
 				{
 					// Set Model Rotation
 					model = rotate(model, 0.01f, glm::vec3(0, 1, 0)); // Rotate
-					Xradius += 0.01f;
 				}
 
 				else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up))
 				{
 					// Set Model Rotation
 					model = rotate(model, -0.01f, glm::vec3(1, 0, 0)); // Rotate
-					Yradius -= 0.01f;
 				}
 
 				else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down))
 				{
 					// Set Model Rotation
 					model = rotate(model, 0.01f, glm::vec3(1, 0, 0)); // Rotate
-					Yradius += 0.01f;
 				}
 
-				
+
 				update();
 				render();
 
 				timeSinceLastUpdate = sf::Time::Zero;
 			}
-
 		}
+
+
 	}
 
 #if (DEBUG >= 2)
@@ -129,8 +138,6 @@ void Game::run()
 
 void Game::initialize()
 {
-	model2 = translate(model2, glm::vec3(rand() % 6, 0, -100));
-
 	isRunning = true;
 	GLint isCompiled = 0;
 	GLint isLinked = 0;
@@ -160,7 +167,7 @@ void Game::initialize()
 	//Indices to be drawn
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, 3 * INDICES * sizeof(GLuint), indices, GL_STATIC_DRAW);
 
-	const char* vs_src = 
+	const char* vs_src =
 		"#version 400\n\r"
 		""
 		//"layout(location = 0) in vec3 sv_position; //Use for individual Buffers"
@@ -278,7 +285,7 @@ void Game::initialize()
 
 	//Filtering
 	//https://www.khronos.org/opengles/sdk/docs/man/xhtml/glTexParameter.xml
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST); 
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
 	//Bind to OpenGL
@@ -303,6 +310,9 @@ void Game::initialize()
 	textureID = glGetUniformLocation(progID, "f_texture");
 	mvpID = glGetUniformLocation(progID, "sv_mvp");
 
+
+	cameraFront = glm::vec3(0.0f, 0.0f, 0.0f);
+
 	// Projection Matrix 
 	projection = perspective(
 		45.0f,					// Field of View 45 degrees
@@ -311,17 +321,13 @@ void Game::initialize()
 		100.0f					// Display Range Max : 100.0f unit
 		);
 
-	// Camera Matrix
-	view = lookAt(
-		vec3(0.0f, 4.0f, 10.0f),	// Camera (x,y,z), in World Space
-		vec3(0.0f, 0.0f, 0.0f),		// Camera looking at origin
-		vec3(0.0f, 1.0f, 0.0f)		// 0.0f, 1.0f, 0.0f Look Down and 0.0f, -1.0f, 0.0f Look Up
-		);
 
 	// Model matrix
 	model = mat4(
 		1.0f					// Identity Matrix
 		);
+
+
 
 	// Enable Depth Test
 	glEnable(GL_DEPTH_TEST);
@@ -334,27 +340,41 @@ void Game::update()
 #if (DEBUG >= 2)
 	DEBUG_MSG("Updating...");
 #endif
-	m_player.update(timePerFrame.asSeconds());
-	m_enemy.update();
-	model = translate(model, glm::vec3(m_player.getdistancePosX() * cos(Xradius), 0, m_player.getdistancePosX() * sin(Xradius)));
-	model = translate(model, glm::vec3(0, m_player.getdistancePosY() * cos(Xradius) , m_player.getdistancePosY() * sin(Xradius)));
-
-
-
-	model2 = translate(model2, glm::vec3(0, 0, 0.02f));
-
-
-	if (0 >= m_enemy.getEnemyPos().z)
-	{
-		model2 = translate(model2, glm::vec3(rand() % 6, 0, -100));
-	}
-
-	if (m_player.getPlayerPos().x - 1 <= m_enemy.getEnemyPos().x && m_player.getPlayerPos().x + 1 >= m_enemy.getEnemyPos().x)
-	{
-		window.close();
-	}
 	// Update Model View Projection
-	mvp = projection * view * model;
+	m_mousePos = sf::Mouse::getPosition(window);
+
+	mouseMovement();
+	//view = lookAt(vec3(0.0f, 0.0f, 10.0f),	// Camera positon
+	//			cameraFront,		// looking dirction
+	//			vec3(0.0f, 1.0f, 0.0f)		// up and down
+	//			);
+
+	mvp = projection * viewLeft * viewRight * model;
+
+
+}
+
+void Game::leftViewports()
+{
+	glViewport(0, 0, 400, 600);
+	glLoadIdentity();
+	viewLeft = lookAt(vec3(0.0f, 0.0f, 5.0f),	// Camera (x,y,z), in World Space
+			cameraFront,	// Camera looking at origin
+			vec3(0.0f, 1.0f, 0.0f)	// 0.0f, 1.0f, 0.0f Look Down and 0.0f, -1.0f, 0.0f Look Up
+			);
+	glDrawElements(GL_TRIANGLES, 3 * INDICES, GL_UNSIGNED_INT, NULL);
+}
+
+void Game::rightViewports()
+{
+	glViewport(400, 0, 400, 600);
+	glLoadIdentity();
+	viewRight = lookAt(vec3(0.0f, 0.0f, 5.0f),	// Camera (x,y,z), in World Space
+		cameraFront,	// Camera looking at origin
+		vec3(0.0f, 1.0f, 0.0f)	// 0.0f, 1.0f, 0.0f Look Down and 0.0f, -1.0f, 0.0f Look Up
+		);
+
+	glDrawElements(GL_TRIANGLES, 3 * INDICES, GL_UNSIGNED_INT, NULL);
 }
 
 void Game::render()
@@ -383,7 +403,7 @@ void Game::render()
 	glVertexAttribPointer(positionID, 3, GL_FLOAT, GL_FALSE, 0, 0);
 	glVertexAttribPointer(colorID, 4, GL_FLOAT, GL_FALSE, 0, (VOID*)(3 * VERTICES * sizeof(GLfloat)));
 	glVertexAttribPointer(uvID, 2, GL_FLOAT, GL_FALSE, 0, (VOID*)(((3 * VERTICES) + (4 * COLORS)) * sizeof(GLfloat)));
-	
+
 	//Enable Arrays
 	glEnableVertexAttribArray(positionID);
 	glEnableVertexAttribArray(colorID);
@@ -392,34 +412,8 @@ void Game::render()
 	//Draw Element Arrays
 	glDrawElements(GL_TRIANGLES, 3 * INDICES, GL_UNSIGNED_INT, NULL);
 
-	mvp = projection * view * model2;
-
-	//VBO Data....vertices, colors and UV's appended
-	glBufferSubData(GL_ARRAY_BUFFER, 0 * VERTICES * sizeof(GLfloat), 3 * VERTICES * sizeof(GLfloat), vertices);
-	glBufferSubData(GL_ARRAY_BUFFER, 3 * VERTICES * sizeof(GLfloat), 4 * COLORS * sizeof(GLfloat), colors);
-	glBufferSubData(GL_ARRAY_BUFFER, ((3 * VERTICES) + (4 * COLORS)) * sizeof(GLfloat), 2 * UVS * sizeof(GLfloat), uvs);
-
-	// Send transformation to shader mvp uniform
-	glUniformMatrix4fv(mvpID, 1, GL_FALSE, &mvp[0][0]);
-
-	//Set Active Texture .... 32
-	glActiveTexture(GL_TEXTURE0);
-	glUniform1i(textureID, 0);
-
-	//Set pointers for each parameter (with appropriate starting positions)
-	//https://www.khronos.org/opengles/sdk/docs/man/xhtml/glVertexAttribPointer.xml
-	glVertexAttribPointer(positionID, 3, GL_FLOAT, GL_FALSE, 0, 0);
-	glVertexAttribPointer(colorID, 4, GL_FLOAT, GL_FALSE, 0, (VOID*)(3 * VERTICES * sizeof(GLfloat)));
-	glVertexAttribPointer(uvID, 2, GL_FLOAT, GL_FALSE, 0, (VOID*)(((3 * VERTICES) + (4 * COLORS)) * sizeof(GLfloat)));
-
-	//Enable Arrays
-	glEnableVertexAttribArray(positionID);
-	glEnableVertexAttribArray(colorID);
-	glEnableVertexAttribArray(uvID);
-
-
-	//Draw Element Arrays
-	glDrawElements(GL_TRIANGLES, 3 * INDICES, GL_UNSIGNED_INT, NULL);
+	leftViewports();
+	rightViewports();
 
 	window.display();
 
@@ -427,7 +421,7 @@ void Game::render()
 	glDisableVertexAttribArray(positionID);
 	glDisableVertexAttribArray(colorID);
 	glDisableVertexAttribArray(uvID);
-	
+
 }
 
 void Game::unload()
@@ -439,4 +433,41 @@ void Game::unload()
 	glDeleteBuffers(1, &vbo);	//Delete Vertex Buffer
 	glDeleteBuffers(1, &vib);	//Delete Vertex Index Buffer
 	stbi_image_free(img_data);		//Free image
+}
+
+void Game::mouseMovement()
+{
+	float xpos = static_cast<float>(m_mousePos.x);
+	float ypos = static_cast<float>(m_mousePos.y);
+
+	// get mouse positoin changing
+	GLfloat x = xpos - lastX;
+	GLfloat y = lastY - ypos; 
+	//record the last mouse positon
+	lastX = xpos;
+	lastY = ypos;
+
+	// move camera direction
+	diertionX += -x;
+	diertionY += y;
+
+	
+	// Make sure that when y direction is out of bounds, screen doesn't get flipped
+	if (diertionY > 90.0f)
+		diertionY = 90.0f;
+	if (diertionY < -90.0f)
+		diertionY = -90.0f;
+
+	// Make sure that when y direction is out of bounds, screen doesn't get flipped
+	if (diertionX > 180.0f)
+		diertionX = 180.0f;
+	if (diertionX < 0.0f)
+		diertionX = 0.0f;
+
+	// get the camera looking at origin
+	glm::vec3 front;
+	front.x = cos(glm::radians(diertionX)) * cos(glm::radians(diertionY));
+	front.y = sin(glm::radians(diertionY));
+	front.z = sin(glm::radians(diertionX)) * cos(glm::radians(diertionY));
+	cameraFront = glm::normalize(front);
 }

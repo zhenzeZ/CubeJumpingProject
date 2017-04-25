@@ -23,6 +23,7 @@ void Player::update(double t)
 {
 
 	m_time = t;
+
 	if (sf::Keyboard::isKeyPressed(sf::Keyboard::A))
 	{
 		m_motion.x = -20.0f;
@@ -50,7 +51,7 @@ void Player::update(double t)
 		timesToJump = 2;
 	}
 
-	m_acceleration = 1 * 0.8 * m_gravity; // a = m * res * g
+	m_acceleration = m_motion.x * 0.8 * m_gravity; // a = m * res * g
 
 	m_motion.x = m_motion.x - m_acceleration * m_time; // v = v - a * t
 
